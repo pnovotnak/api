@@ -165,6 +165,12 @@ message VirtualService {
   // an incoming request is used.
   repeated HTTPRoute http = 3;
 
+  // An ordered list of route rules for Thrift traffic. Thrift routes will be
+  // applied to platform service ports named 'thrift-*', gateway ports with
+  // protocol Thrift and service entry ports using Thrift. The first rule
+  // matching an incoming request is used.
+  repeated ThriftRoute thrift = 7;
+
   // An ordered list of route rule for non-terminated TLS & HTTPS
   // traffic. Routing is typically performed using the SNI value presented
   // by the ClientHello message. TLS routes will be applied to platform
@@ -432,6 +438,28 @@ message HTTPRoute {
   Headers headers = 16;
 }
 
+// Describes match conditions and actions for routing Thrift traffic.
+// See VirtualService for usage examples.
+message ThriftRoute {
+  // The name assigned to the route for debugging purposes. The
+  // route's name will be concatenated with the match's name and will
+  // be logged in the access logs for requests matching this
+  // route/match.
+  string name = 1;
+
+  // Match conditions to be satisfied for the rule to be
+  // activated. All conditions inside a single match block have AND
+  // semantics, while the list of match blocks have OR semantics. The rule
+  // is matched if any one of the match blocks succeed.
+  repeated ThriftMatchRequest match = 2;
+
+  // A http rule can either redirect or forward (default) traffic. The
+  // forwarding target can be one of several versions of a service (see
+  // glossary in beginning of document). Weights associated with the
+  // service version determine the proportion of traffic it receives.
+  repeated RouteDestination route = 3;
+}
+
 // Message headers can be manipulated when Envoy forwards requests to,
 // or responses from, a destination service. Header manipulation rules can
 // be specified for a specific route destination or for all destinations.
@@ -685,6 +713,38 @@ message HTTPMatchRequest {
   // **Note:** The case will be ignored only in the case of `exact` and `prefix`
   // URI matches.
   bool ignore_uri_case = 10;
+}
+
+// ThriftMatchRequest specifies a set of criterion to be met in order for the
+// rule to be applied to the Thrift request. For example, the following
+// matches all requests.
+//
+// ```yaml
+// apiVersion: networking.istio.io/v1alpha3
+// kind: VirtualService
+// metadata:
+//   name: ratings-route
+// spec:
+//   hosts:
+//   - ratings.prod.svc.cluster.local
+//   thrift:
+//   - match:
+//     - method_name: ""
+//     route:
+//     - destination:
+//         host: ratings.prod.svc.cluster.local
+// ```
+//
+// HTTPMatchRequest CANNOT be empty.
+message ThriftMatchRequest {
+  // TODO (peter.novotnak@reddit.com) see if this works
+  // The name assigned to a match. The match's name will be
+  // concatenated with the parent route's name and will be logged in
+  // the access logs for requests matching this route.
+  //string name = 1;
+
+  // Method to match
+  StringMatch method_name = 2;
 }
 
 // Each routing rule is associated with one or more service versions (see
